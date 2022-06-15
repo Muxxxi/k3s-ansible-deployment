@@ -1,0 +1,46 @@
+---
+
+- hosts: "{{ host }}"
+  tasks:
+    - name: install oauth2-proxy
+      register: oauth2
+      kubernetes.core.helm:
+        name: oauth2-proxy
+        chart_ref: oauth2-proxy
+        chart_repo_url: https://oauth2-proxy.github.io/manifests
+        release_namespace: apps
+        wait: true
+        values:
+          ingress:
+            enabled: true
+            hosts: 
+              - sso.apps.{{ base_hostname }}
+            annotations:
+              cert-manager.io/issuer: "letsencrypt-prod"
+              nginx.ingress.kubernetes.io/app-root: /oauth2
+            path: /oauth2
+            pathType: Prefix
+            className: nginx
+            tls:
+            - hosts:
+              - "sso.apps.{{ base_hostname }}"
+              secretName: oauth2-proxy-tls-cert
+          authenticatedEmailsFile:
+            enabled: true
+            restricted_access: |
+              {{ oauth2_github_email }}
+          config:
+            clientID: "{{ oauth2_client_id }}"
+            clientSecret: "{{ oauth2_client_secret }}"
+            cookieSecret: "{{ oauth2_cookie_secret }}"
+            configFile: |
+              cookie_expire="24h0m0s"
+              provider="github"
+              http_address=":4180"
+              upstreams="file:///dev/null"
+              cookie_domains=[".apps.{{ base_hostname }}"]
+              whitelist_domains=[".apps.{{ base_hostname }}"]
+   
+    - debug:
+        msg: "{{ oauth2.stdout_lines }}"
+    

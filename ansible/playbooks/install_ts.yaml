@@ -1,0 +1,26 @@
+---
+
+- hosts: "{{ host }}"
+  tasks:
+    - name: install teamspeak
+      register: ts
+      kubernetes.core.helm:
+        name: teamspeak
+        chart_ref: teamspeak3
+        chart_repo_url: http://charts.sandermann.cloud
+        release_namespace: apps
+        update_repo_cache: true
+        values:
+          service:
+            ip: "{{ ansible_host }}"
+            type: LoadBalancer
+            tcp:
+              type: seperate
+              enabled: true
+            annotations:
+              metallb.universe.tf/allow-shared-ip: default-svc
+          persistence:
+            enabled: true
+            storageClass: "longhorn"
+    - debug:
+        msg: "{{ ts.stdout_lines }}"

@@ -1,0 +1,59 @@
+---
+
+- hosts: "{{ host }}"
+  tasks:
+    - name: install pihole
+      register: pihole
+      kubernetes.core.helm:
+        name: pihole
+        chart_version: 2.5.8
+        chart_ref: pihole
+        chart_repo_url: https://mojo2600.github.io/pihole-kubernetes/
+        release_namespace: apps
+        update_repo_cache: true
+        values:
+          DNS1: 8.8.8.8
+          DNS2: 8.8.4.4
+
+          virtualHost: pihole.apps.{{ base_hostname }}
+
+          persistentVolumeClaim:
+            enabled: true
+            storageClass: longhorn
+          
+          extraEnvVars:
+            DNSMASQ_USER: root
+
+          serviceDhcp:
+            enabled: false
+            
+          ingress:
+            enabled: true
+            annotations:
+              kubernetes.io/ingress.class: "nginx"   
+              cert-manager.io/issuer: "letsencrypt-prod"
+              nginx.ingress.kubernetes.io/auth-response-headers: Authorization
+              nginx.ingress.kubernetes.io/auth-signin: "https://sso.apps.{{ base_hostname }}/oauth2/start?rd=$scheme%3A%2F%2F$host$escaped_request_uri"
+              nginx.ingress.kubernetes.io/auth-url: "https://sso.apps.{{ base_hostname }}/oauth2/auth"
+              nginx.ingress.kubernetes.io/configuration-snippet: |
+                  auth_request_set $name_upstream_1 $upstream_cookie_oauth2_proxy_1;
+                  access_by_lua_block {
+                      if ngx.var.name_upstream_1 ~= "" then
+                      ngx.header["Set-Cookie"] = "_oauth2_proxy_1=" .. ngx.var.name_upstream_1 .. ngx.var.auth_cookie:match("(; .*)")
+                      end
+                  }
+            hosts:
+              - "pihole.apps.{{ base_hostname }}"
+            tls:
+              - hosts:
+                - "pihole.apps.{{ base_hostname }}"
+                secretName: pihole-tls-cert
+
+          serviceDns:
+            loadBalancerIP: 167.235.226.219
+            annotations:
+              metallb.universe.tf/allow-shared-ip: default-svc
+            type: LoadBalancer
+
+    - debug:
+        msg: "{{ pihole.stdout_lines }}"

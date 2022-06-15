@@ -1,0 +1,81 @@
+# Configure Fail2Ban
+# Configure SSH with same port as fail2ban
+- name: Remove snapd
+  apt:
+    name: snapd
+    purge: true
+    autoremove: true
+    state: absent
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Add kubectl official GPG key
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: Add kubectl repository to apt
+  apt_repository:
+    repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+    state: present
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Install System Tools
+  apt:
+    pkg:
+    - kubectl
+    - htop
+    - apt-transport-https
+    - nload
+    - fail2ban
+    - iotop
+    - wget
+    - git
+    - zip
+    - curl
+    state: latest
+    update_cache: yes
+    install_recommends: no
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: download helm
+  get_url:
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    dest: /tmp/get_helm.sh
+    mode: 755
+    force: true
+
+- name: run helm install
+  command: "/tmp/get_helm.sh"
+
+
+- name: make directory /etc/systemd/resolved.conf.d/
+  file:
+    path: "/etc/systemd/resolved.conf.d"
+    state: directory
+    mode: 0755
+    owner: "root"
+    group: "root"
+
+- name: create file to disable dns resolved stub
+  copy:
+    dest: "/etc/systemd/resolved.conf.d/disable-stub.conf"
+    content: |
+      [Resolve]
+      DNSStubListener=no
+    mode: 0644
+    owner: "root"
+    group: "root"
+
+
+- name: create symlink for resolv.conf
+  file:
+    src: /run/systemd/resolve/resolv.conf
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    state: link
+
+- name: restart systemd-resolved
+  service:
+    name: systemd-resolved
+    state: restarted

@@ -1,0 +1,7 @@
+---
+
+- hosts: "{{ host }}"
+  roles:
+    - update
+    - install-system-tools
+    - bootstrap-k3s    
