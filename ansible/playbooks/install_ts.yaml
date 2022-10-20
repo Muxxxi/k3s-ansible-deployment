@@ -2,25 +2,65 @@
 
 - hosts: "{{ host }}"
   tasks:
+    - name: Add muxxxi chart repo
+      kubernetes.core.helm_repository:
+        name: muxxxi
+        repo_url: "https://muxxxi.github.io/helm-charts"
+
+    - name: create pvc for teamspeak
+      kubernetes.core.k8s:
+        state: present
+        namespace: apps
+        definition:
+          kind: PersistentVolumeClaim
+          apiVersion: v1
+          metadata:
+            name: teamspeak3-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+            storageClassName: longhorn
+
     - name: install teamspeak
       register: ts
       kubernetes.core.helm:
-        name: teamspeak
-        chart_ref: teamspeak3
-        chart_repo_url: http://charts.sandermann.cloud
+        name: teamspeak3
+        chart_ref: muxxxi/teamspeak3
+        chart_version: 0.3.16
         release_namespace: apps
         update_repo_cache: true
         values:
+          ts3ServerViewer: 
+            tsApiKey: "{{ ts3_api_key }}"
+            tsApiUrl: "http://teamspeak3-tcp:10080/"
+            ingress:
+              enabled: true
+              ingressClassName: nginx
+              annotations:
+                cert-manager.io/issuer: "letsencrypt-prod"
+                nginx.ingress.kubernetes.io/configuration-snippet: |
+                  proxy_set_header SCRIPT_NAME {{ ts3_viewer_path }};
+              hosts:
+                - host: "ts.apps.{{ base_hostname }}"
+                  path: "{{ ts3_viewer_path }}"
+                  pathType: Prefix
+              tls:
+                - hosts:
+                  - "ts.apps.{{ base_hostname }}"
+                  secretName: ts-tls-cert
           service:
             ip: "{{ ansible_host }}"
             type: LoadBalancer
-            tcp:
-              type: seperate
-              enabled: true
             annotations:
               metallb.universe.tf/allow-shared-ip: default-svc
           persistence:
             enabled: true
-            storageClass: "longhorn"
+            existingClaim: teamspeak3-data
+          ingress:
+            enabled: false
+        
     - debug:
         msg: "{{ ts.stdout_lines }}"
