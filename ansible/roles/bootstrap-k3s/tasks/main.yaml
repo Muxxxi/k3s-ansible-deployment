@@ -50,27 +50,26 @@
   kubernetes.core.helm:
     name: metallb 
     chart_ref: metallb/metallb
-    wait: true
     release_namespace: metallb-system
     update_repo_cache: true
     create_namespace: true
-    values:
-      configInline:
-        address-pools:
-        - name: default
-          protocol: layer2
-          addresses:
-          - "{{ ansible_host }}/32" 
-          - "{{ ipv6_address }}"
+    chart_version: 0.13.7
+    wait: true
 
+- name: create metallb cr
+  kubernetes.core.k8s:
+    state: present
+    template: 'templates/metallb.j2'
 
 - name: install nginx-ingress
   kubernetes.core.helm:
     name: ingress-nginx 
     chart_ref: nginx/ingress-nginx
-    wait: true
     release_namespace: ingress-nginx
+    update_repo_cache: true
     create_namespace: true
+    chart_version: 4.3.0
+    wait: true
     values:
       controller:
         service:
@@ -83,9 +82,10 @@
     name: certmgr
     chart_ref: jetstack/cert-manager
     release_namespace: cert-manager
-    wait: true
     create_namespace: true
-    chart_version: v1.7.1
+    update_repo_cache: true
+    chart_version: v1.10.0
+    wait: true
     values:
       installCRDs: true
 
@@ -95,6 +95,8 @@
     chart_ref: longhorn/longhorn
     release_namespace: longhorn-system
     create_namespace: true
+    update_repo_cache: true
+    chart_version: 1.3.2
     wait: true
     values:
       persistence:
