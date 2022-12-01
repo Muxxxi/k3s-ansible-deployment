@@ -33,7 +33,10 @@
         release_namespace: apps
         update_repo_cache: true
         values:
-          ts3ServerViewer: 
+          ts3ServerViewer:
+            image:
+              tag: v1.0.2
+              pullPolicy: Always
             tsApiKey: "{{ ts3_api_key }}"
             tsApiUrl: "http://teamspeak3-tcp:10080/"
             ingress:
@@ -41,12 +44,23 @@
               ingressClassName: nginx
               annotations:
                 cert-manager.io/issuer: "letsencrypt-prod"
+#                nginx.ingress.kubernetes.io/rewrite-target: /$2
                 nginx.ingress.kubernetes.io/configuration-snippet: |
-                  proxy_set_header SCRIPT_NAME {{ ts3_viewer_path }};
+                  proxy_set_header SCRIPT_NAME /{{ ts3_viewer_path }};
+                  proxy_set_header X-Forwarded-Prefix /{{ ts3_viewer_path }};
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header HOST $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_pass_request_headers on;
               hosts:
                 - host: "ts.apps.{{ base_hostname }}"
-                  path: "{{ ts3_viewer_path }}"
+                  path: "/{{ ts3_viewer_path }}"
                   pathType: Prefix
+#                  path: "/{{ ts3_viewer_path }}(/|$)(.*)"
+#                  pathType: ImplementationSpecific
               tls:
                 - hosts:
                   - "ts.apps.{{ base_hostname }}"
