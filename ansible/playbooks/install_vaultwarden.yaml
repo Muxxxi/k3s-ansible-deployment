@@ -1,0 +1,109 @@
+---
+
+- hosts: "{{ host }}"
+  tasks:
+    - name: Add muxxxi chart repo
+      kubernetes.core.helm_repository:
+        name: muxxxi
+        repo_url: "https://muxxxi.github.io/helm-charts"
+
+    - name: create pvc for vaultwarden
+      kubernetes.core.k8s:
+        state: present
+        namespace: apps
+        definition:
+          kind: PersistentVolumeClaim
+          apiVersion: v1
+          metadata:
+            name: vaultwarden-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+            storageClassName: longhorn
+
+    - name: install vaultwarden
+      register: vault
+      kubernetes.core.helm:
+        name: vaultwarden
+        chart_ref: muxxxi/vaultwarden
+        chart_version: 0.1.6
+        release_namespace: apps
+        update_repo_cache: true
+        values:
+          domain: "https://vault.apps.{{ base_hostname }}"
+          websocket: 
+            enabled: true
+            ingress:
+              annotations:
+                nginx.ingress.kubernetes.io/configuration-snippet: |
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host $host;
+                  proxy_set_header Forwarded $remote_addr;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              extraAnnotations:
+                cert-manager.io/issuer: "letsencrypt-prod"
+              hosts:
+                - host: "vault.apps.{{ base_hostname }}"
+                  paths:
+                    - path: "/notifications/hub"
+                      pathType: Exact
+              tls:
+                - secretName: vaultwarden-tls-cert
+                  hosts:
+                    - "vault.apps.{{ base_hostname }}"
+          admin: 
+            enabled: true
+            adminToken: "{{ admin_token_vault }}"
+            ingress:
+              annotations:
+                cert-manager.io/issuer: "letsencrypt-prod"
+                nginx.ingress.kubernetes.io/auth-response-headers: Authorization
+                nginx.ingress.kubernetes.io/auth-signin: "https://sso.apps.{{ base_hostname }}/oauth2/sign_in?rd=$scheme%3A%2F%2F$host$escaped_request_uri"
+                nginx.ingress.kubernetes.io/auth-url: "https://sso.apps.{{ base_hostname }}/oauth2/auth"
+                nginx.ingress.kubernetes.io/configuration-snippet: |
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                    auth_request_set $name_upstream_1 $upstream_cookie_oauth2_proxy_1;
+                    access_by_lua_block {
+                        if ngx.var.name_upstream_1 ~= "" then
+                        ngx.header["Set-Cookie"] = "_oauth2_proxy_1=" .. ngx.var.name_upstream_1 .. ngx.var.auth_cookie:match("(; .*)")
+                        end
+                    }
+              hosts:
+                - host: "vault.apps.{{ base_hostname }}"
+                  paths:
+                    - path: "/admin"
+                      pathType: Exact
+              tls:
+                - secretName: vaultwarden-tls-cert
+                  hosts:
+                    - "vault.apps.{{ base_hostname }}"
+          persistence:
+            enabled: true
+            existingClaim: vaultwarden-data
+          ingress:
+            enabled: true
+            extraAnnotations:
+                cert-manager.io/issuer: "letsencrypt-prod"
+                nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+            hosts:
+              - host: "vault.apps.{{ base_hostname }}"
+                paths:
+                  - path: "/"
+                    pathType: ImplementationSpecific
+            tls:
+              - secretName: vaultwarden-tls-cert
+                hosts:
+                  - "vault.apps.{{ base_hostname }}"
+          
+        
+    - debug:
+        msg: "{{ vault.stdout_lines }}"
