@@ -18,7 +18,7 @@
           virtualHost: pihole.apps.{{ base_hostname }}
 
           persistentVolumeClaim:
-            enabled: true
+            enabled: false
             storageClass: longhorn
           
           extraEnvVars:
@@ -50,10 +50,18 @@
                 secretName: pihole-tls-cert
 
           serviceDns:
-            loadBalancerIP: 167.235.226.219
+            loadBalancerIP: "{{ ansible_host }}"
             annotations:
               metallb.universe.tf/allow-shared-ip: default-svc
             type: LoadBalancer
+            externalTrafficPolicy: Cluster
+
+          dnsmasq:
+            customSettings:
+              - edns-packet-max=1232
+
+          image:
+            tag: 2022.05
 
     - debug:
         msg: "{{ pihole.stdout_lines }}"
