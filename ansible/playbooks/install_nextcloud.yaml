@@ -1,0 +1,119 @@
+---
+
+- hosts: "{{ host }}"
+  tasks:
+    - name: Add nextcloud chart repo
+      kubernetes.core.helm_repository:
+        name: nextcloud
+        repo_url: "https://nextcloud.github.io/helm/"
+
+    - name: create pvc for mariadb
+      kubernetes.core.k8s:
+        state: present
+        namespace: apps
+        definition:
+          kind: PersistentVolumeClaim
+          apiVersion: v1
+          metadata:
+            name: nextcloud-db
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 4Gi
+            storageClassName: longhorn
+
+    - name: create pvc for nextlcoud
+      kubernetes.core.k8s:
+        state: present
+        namespace: apps
+        definition:
+          kind: PersistentVolumeClaim
+          apiVersion: v1
+          metadata:
+            name: nextcloud-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+            storageClassName: longhorn
+
+    - name: install nextcloud
+      register: nextcloud
+      kubernetes.core.helm:
+        name: nextcloud
+        chart_ref: nextcloud/nextcloud
+        chart_version: 3.3.3
+        release_namespace: apps
+        update_repo_cache: true
+        values:
+          ingress:
+            enabled: true
+            className: nginx
+            annotations:
+              cert-manager.io/issuer: "letsencrypt-prod"
+              nginx.ingress.kubernetes.io/enable-cors: "true"
+              nginx.ingress.kubernetes.io/cors-allow-headers: "X-Forwarded-For"
+              nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+              nginx.ingress.kubernetes.io/configuration-snippet: |
+                  proxy_set_header X-Forwarded-Proto $scheme;
+            tls: 
+              - secretName: nextcloud-tls-cert
+                hosts:
+                  - "cloud.apps.{{ base_hostname }}"
+        
+          nextcloud:
+            host: "cloud.apps.{{ base_hostname }}"
+            password: "{{ nextcloud_pw }}"
+            username: max
+            mail:
+              enabled: true
+              fromAddress: "no-reply"
+              domain: "{{ base_hostname }}"
+              smtp:
+                host: "smtp.gmail.com"
+                secure: "tls"
+                port: 587
+                name: "{{ gmail_user }}"
+                password: "{{ gmail_pw }}"
+
+          phpClientHttpsFix:
+            enabled: true
+
+          mariadb:
+            enabled: true
+            auth:
+              password: "{{ nextcloud_db_pw }}"
+              rootPassword: "{{ nextcloud_db_root_pw }}"
+            primary:
+              persistence:
+                enabled: true
+                existingClaim: "nextcloud-db"
+
+          internalDatabase:
+            enabled: false
+
+          persistence:
+            enabled: true
+            existingClaim: "nextcloud-data"
+
+          redis:
+            enabled: false
+            password: ''
+            master:
+              persistence:
+                enabled: false
+            replica:
+              replicaCount: 0
+
+          cronjob:
+            enabled: false
+
+
+
+          
+    - debug:
+        msg: "{{ nextcloud.stdout_lines }}"
