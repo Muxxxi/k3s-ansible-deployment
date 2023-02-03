@@ -1,0 +1,22 @@
+- name: Add stable chart repo
+  kubernetes.core.helm_repository:
+    name: "{{ item.name }}"
+    repo_url: "{{ item.url }}"
+  with_items: 
+    - {name: 'nginx', url: 'https://kubernetes.github.io/ingress-nginx'}
+
+- name: install nginx-ingress
+  kubernetes.core.helm:
+    name: ingress-nginx 
+    chart_ref: nginx/ingress-nginx
+    release_namespace: ingress-nginx
+    update_repo_cache: true
+    create_namespace: true
+    chart_version: 4.3.0
+    wait: true
+    values:
+      controller:
+        service:
+          annotations:
+            metallb.universe.tf/allow-shared-ip: default-svc
+          externalTrafficPolicy: Cluster

@@ -1,5 +1,0 @@
----
-
-- hosts: hetzner01
-  roles:
-    - update

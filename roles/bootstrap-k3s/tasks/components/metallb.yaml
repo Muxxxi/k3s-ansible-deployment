@@ -1,0 +1,21 @@
+- name: Add stable chart repo
+  kubernetes.core.helm_repository:
+    name: "{{ item.name }}"
+    repo_url: "{{ item.url }}"
+  with_items: 
+    - {name: 'metallb', url: 'https://metallb.github.io/metallb'}
+
+- name: install metallb
+  kubernetes.core.helm:
+    name: metallb 
+    chart_ref: metallb/metallb
+    release_namespace: metallb-system
+    update_repo_cache: true
+    create_namespace: true
+    chart_version: 0.13.7
+    wait: true
+
+- name: create metallb cr
+  kubernetes.core.k8s:
+    state: present
+    template: 'templates/metallb.j2'

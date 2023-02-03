@@ -1,0 +1,5 @@
+collections:
+  - kubernetes.core
+  - name: git+https://github.com/Muxxxi/ansible-roles.git
+    type: git
+    version: main

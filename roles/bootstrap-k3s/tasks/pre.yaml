@@ -1,13 +1,4 @@
-# Configure Fail2Ban
-# Configure SSH with same port as fail2ban
-- name: Remove snapd
-  apt:
-    name: snapd
-    purge: true
-    autoremove: true
-    state: absent
-  when: ansible_distribution == 'Ubuntu'
-
+# Install Kubectl
 - name: Add kubectl official GPG key
   apt_key:
     url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
@@ -23,21 +14,8 @@
   apt:
     pkg:
     - kubectl
-    - htop
-    - apt-transport-https
-    - nload
-    - fail2ban
-    - iotop
-    - wget
-    - python3-pip
-    - git
-    - zip
-    - curl
-    state: latest
-    update_cache: yes
-    install_recommends: no
-  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
+# Install Helm
 - name: Install kubernetes python package
   pip:
     name: kubernetes
@@ -52,7 +30,7 @@
 - name: run helm install
   command: "/tmp/get_helm.sh"
 
-
+# Disable DNSStubListener
 - name: make directory /etc/systemd/resolved.conf.d/
   file:
     path: "/etc/systemd/resolved.conf.d"
@@ -70,7 +48,6 @@
     mode: 0644
     owner: "root"
     group: "root"
-
 
 - name: create symlink for resolv.conf
   file:
