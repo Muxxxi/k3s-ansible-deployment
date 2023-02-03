@@ -24,7 +24,7 @@
     release_namespace: cert-manager
     create_namespace: true
     update_repo_cache: true
-    chart_version: v1.10.0
+    chart_version: 1.11.0
     wait: true
     values:
       installCRDs: true
