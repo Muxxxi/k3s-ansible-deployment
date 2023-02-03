@@ -3,5 +3,5 @@
 - hosts: "{{ host }}"
   roles:
     - muxxxi.basic.update
-    - muxxxi.basic.install-system-tools
-    - bootstrap-k3s    
+    - muxxxi.basic.install_system_tools
+    - install_k3s    
