@@ -1,6 +1,6 @@
 - import_tasks: pre.yaml
 - import_tasks: k3s.yaml
-- import_tasks: metallb.yaml
-- import_tasks: cert.yaml
-- import_tasks: longhorn.yaml
-- import_tasks: nginx.yaml
+- import_tasks: components/metallb.yaml
+- import_tasks: components/cert.yaml
+- import_tasks: components/longhorn.yaml
+- import_tasks: components/nginx.yaml
