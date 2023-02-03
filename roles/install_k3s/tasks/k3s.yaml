@@ -8,6 +8,8 @@
 - name: run  k3s install
   command: "/tmp/k3s_install.sh --write-kubeconfig-mode 644 --disable traefik --disable servicelb"
   register: k3s
+  environment: 
+    INSTALL_K3S_VERSION: "v1.23.16+k3s1"
 
 - name: create .kube directory
   file:
