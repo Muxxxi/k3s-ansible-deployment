@@ -28,6 +28,7 @@
     wait: true
     values:
       installCRDs: true
+      extraArgs: "{--dns01-recursive-nameservers-only,--dns01-recursive-nameservers=8.8.8.8:53}"
 
 - name: Create prod cert issuer in the apps namespace
   kubernetes.core.k8s:
@@ -76,3 +77,9 @@
           - http01:
               ingress:
                 class:  nginx
+          - dns01:
+              acmeDNS:
+                host: https://auth.acme-dns.io
+                accountSecretRef:
+                  name: acme-dns
+                  key: acmedns.json
