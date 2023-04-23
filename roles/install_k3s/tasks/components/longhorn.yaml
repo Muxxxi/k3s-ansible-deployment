@@ -12,8 +12,12 @@
     release_namespace: longhorn-system
     create_namespace: true
     update_repo_cache: true
-    chart_version: 1.4.0
+    chart_version: "{{ longhorn_version }}"
     wait: true
     values:
       persistence:
         defaultClassReplicaCount: 1
+
+- name: Make Storage class local-path non default
+  command: |
+    kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'

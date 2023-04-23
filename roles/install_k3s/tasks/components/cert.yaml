@@ -3,13 +3,6 @@
     that:
       - cert_manager_email is defined
 
-- name: Create a k8s namespace
-  kubernetes.core.k8s:
-    name: apps
-    api_version: v1
-    kind: Namespace
-    state: present
-
 - name: Add stable chart repo
   kubernetes.core.helm_repository:
     name: "{{ item.name }}"
@@ -24,13 +17,20 @@
     release_namespace: cert-manager
     create_namespace: true
     update_repo_cache: true
-    chart_version: 1.11.0
+    chart_version: "{{ cert_manager_version }}"
     wait: true
     values:
       installCRDs: true
       extraArgs: 
         - --dns01-recursive-nameservers-only
         - --dns01-recursive-nameservers=8.8.8.8:53
+
+- name: Create a k8s namespace
+  kubernetes.core.k8s:
+    name: apps
+    api_version: v1
+    kind: Namespace
+    state: present
 
 - name: Create prod cert issuer in the apps namespace
   kubernetes.core.k8s:
@@ -79,9 +79,3 @@
           - http01:
               ingress:
                 class:  nginx
-          - dns01:
-              acmeDNS:
-                host: https://auth.acme-dns.io
-                accountSecretRef:
-                  name: acme-dns
-                  key: acmedns.json

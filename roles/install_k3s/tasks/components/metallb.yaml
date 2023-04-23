@@ -12,7 +12,7 @@
     release_namespace: metallb-system
     update_repo_cache: true
     create_namespace: true
-    chart_version: 0.13.7
+    chart_version: "{{ metallb_version }}"
     wait: true
 
 - name: create metallb cr

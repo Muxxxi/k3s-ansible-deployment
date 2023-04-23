@@ -1,6 +1,6 @@
 ---
 
-- hosts: "{{ host }}"
+- hosts: "hetzner01"
   tasks:
     - name: Add muxxxi chart repo
       kubernetes.core.helm_repository:
@@ -29,7 +29,7 @@
       kubernetes.core.helm:
         name: vaultwarden
         chart_ref: muxxxi/vaultwarden
-        chart_version: 0.1.6
+        chart_version: 1.0.0
         release_namespace: apps
         update_repo_cache: true
         values:

@@ -9,7 +9,7 @@
   command: "/tmp/k3s_install.sh --write-kubeconfig-mode 644 --disable traefik --disable servicelb"
   register: k3s
   environment: 
-    INSTALL_K3S_VERSION: "v1.23.16+k3s1"
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
 
 - name: create .kube directory
   file:
@@ -36,10 +36,3 @@
 
 - debug:
     msg: "{{ k3s.stdout_lines }}"
-
-- name: Create a k8s namespace
-  kubernetes.core.k8s:
-    name: apps
-    api_version: v1
-    kind: Namespace
-    state: present

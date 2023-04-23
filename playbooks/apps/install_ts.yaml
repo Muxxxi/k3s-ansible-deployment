@@ -1,6 +1,6 @@
 ---
 
-- hosts: "{{ host }}"
+- hosts: "hetzner01"
   tasks:
     - name: Add muxxxi chart repo
       kubernetes.core.helm_repository:

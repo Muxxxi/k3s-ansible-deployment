@@ -1,10 +1,16 @@
 ---
 
-- hosts: "hetzner01"
+- hosts: "hetzner02"
+  gather_facts: false
+  roles:
+    - muxxxi.basic.secure_ssh
+
+- hosts: "hetzner02"
   roles:
     - role: muxxxi.basic.hostname
       tags:
         - hostname
     - muxxxi.basic.update
     - muxxxi.basic.install_system_tools
-    - install_k3s
+  post_tasks:
+    
