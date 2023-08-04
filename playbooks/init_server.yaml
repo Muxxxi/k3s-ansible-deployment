@@ -1,10 +1,25 @@
 ---
 
-- hosts: "hetzner01"
+- name: Init k3s server
+  hosts: "hetzner01"
   roles:
-    - role: muxxxi.basic.hostname
-      tags:
-        - hostname
+    - muxxxi.basic.hostname
     - muxxxi.basic.update
     - muxxxi.basic.install_system_tools
     - install_k3s
+  tasks:
+    - name: Install oauth2-proxy
+      ansible.builtin.import_tasks:
+        file: apps/install_oauth2_proxy.yaml
+      tags:
+        - deploy
+    - name: Install TS
+      ansible.builtin.import_tasks:
+        file: apps/install_ts.yaml
+      tags:
+        - deploy
+    - name: Install Vaultwarden
+      ansible.builtin.import_tasks:
+        file: apps/install_vaultwarden.yaml
+      tags:
+        - deploy

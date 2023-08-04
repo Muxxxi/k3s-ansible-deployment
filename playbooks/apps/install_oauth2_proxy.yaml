@@ -1,0 +1,53 @@
+- name: Add oauth2-proxy chart repo
+  kubernetes.core.helm_repository:
+    name: oauth2
+    repo_url: https://oauth2-proxy.github.io/manifests
+
+- name: Install oauth2-proxy
+  register: oauth2
+  kubernetes.core.helm:
+    name: oauth2-proxy
+    chart_ref: oauth2/oauth2-proxy
+    chart_version: 6.2.7
+    release_namespace: apps
+    update_repo_cache: true
+    wait: true
+    values:
+      ingress:
+        enabled: true
+        hosts:
+          - sso.apps.{{ base_hostname }}
+        annotations:
+          cert-manager.io/issuer: "letsencrypt-prod"
+          nginx.ingress.kubernetes.io/app-root: /oauth2
+          # nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS"
+          # nginx.ingress.kubernetes.io/cors-allow-origin: "https://*.apps.reinheimer.dev"
+          # nginx.ingress.kubernetes.io/enable-cors: "true"
+          # nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+        path: /oauth2
+        pathType: Prefix
+        className: nginx
+        tls:
+          - hosts:
+              - "sso.apps.{{ base_hostname }}"
+            secretName: oauth2-proxy-tls-cert
+      authenticatedEmailsFile:
+        enabled: true
+        restricted_access: |
+          {{ oauth2_github_email }}
+      config:
+        clientID: "{{ oauth2_client_id }}"
+        clientSecret: "{{ oauth2_client_secret }}"
+        cookieSecret: "{{ oauth2_cookie_secret }}"
+        configFile: |
+          cookie_expire="24h0m0s"
+          provider="github"
+          http_address=":4180"
+          upstreams="file:///dev/null"
+          cookie_domains=[".apps.{{ base_hostname }}"]
+          whitelist_domains=[".apps.{{ base_hostname }}"]
+          scope="user:email"
+          skip_provider_button="false"
+
+- debug:
+    msg: "{{ oauth2.stdout_lines }}"
